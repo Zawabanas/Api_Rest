@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Manejador de Usuarios</title>
+  <!-- Bootstrap CSS -->
+  <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+  <div class="container mt-5">
+    <h1>Manejador de Usuarios</h1>
+    <hr>
+    <!-- Listar Usuarios -->
+    <h2>Listar Usuarios</h2>
+    <button class="btn btn-primary mb-3" onclick="fetchUsers()">Mostrar Todos los Usuarios</button>
+    <ul id="userList" class="list-group">
+      <!-- User items will be dynamically added here -->
+    </ul>
+
+    <hr>
+    <!-- Listar Usuario por ID -->
+    <h2>Listar Usuario por ID</h2>
+    <form id="findUserByIdForm" class="mb-3">
+      <div class="form-group">
+        <label for="userId">ID de Usuario:</label>
+        <input type="text" class="form-control" id="userId" name="id" required>
+      </div>
+      <button type="submit" class="btn btn-primary">Buscar Usuario</button>
+    </form>
+
+    <!-- Resultado de la búsqueda -->
+    <div id="userDetails" class="mt-4">
+      <!-- Aquí se mostrará la información del usuario -->
+    </div>
+
+    <hr>
+    <!-- Agregar Usuario -->
+    <h2>Agregar Usuario</h2>
+    <form id="addUserForm" class="mb-3">
+      <div class="form-group">
+        <label for="userName">Nombre:</label>
+        <input type="text" class="form-control" id="userName" name="nombre" required>
+      </div>
+      <div class="form-group">
+        <label for="userUsername">Usuario:</label>
+        <input type="text" class="form-control" id="userUsername" name="usuario" required>
+      </div>
+      <div class="form-group">
+        <label for="userPassword">Contraseña:</label>
+        <input type="password" class="form-control" id="userPassword" name="contraseña" required>
+      </div>
+      <button type="submit" class="btn btn-primary">Agregar Usuario</button>
+    </form>
+
+    <hr>
+    <!-- Editar Usuario -->
+    <h2>Editar Usuario</h2>
+    <form id="editUserForm" class="mb-3">
+      <input type="hidden" id="editUserId" name="id"> <!-- Campo oculto para almacenar el ID del usuario -->
+      <div class="form-group">
+        <label for="editUserName">Nombre:</label>
+        <input type="text" class="form-control" id="editUserName" name="nombre" required>
+      </div>
+      <div class="form-group">
+        <label for="editUserUsername">Usuario:</label>
+        <input type="text" class="form-control" id="editUserUsername" name="usuario" required>
+      </div>
+      <div class="form-group">
+        <label for="editUserPassword">Contraseña:</label>
+        <input type="password" class="form-control" id="editUserPassword" name="contraseña" required>
+      </div>
+      <button type="button" class="btn btn-primary" onclick="updateUser()">Guardar Cambios</button>
+    </form>
+
+
+    <hr>
+    <!-- Eliminar Usuario -->
+    <h2>Eliminar Usuario</h2>
+    <form id="deleteUserForm" class="mb-3">
+      <div class="form-group">
+        <label for="deleteUserId">ID de Usuario:</label>
+        <input type="text" class="form-control" id="deleteUserId" name="id" required>
+      </div>
+      <button type="button" class="btn btn-danger" onclick="deleteUserById()">Eliminar Usuario</button>
+    </form>
+  </div>
+
+  <!-- Bootstrap JS and Axios -->
+  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+ <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<script>
+  function fetchUsers() {
+    axios.get('/users')
+      .then(function (response) {
+        const users = response.data;
+        const userList = document.getElementById('userList');
+        userList.innerHTML = '';
+        users.forEach(function(user) {
+          const li = document.createElement('li');
+          li.className = 'list-group-item';
+          li.innerHTML = `
+            <strong>ID:</strong> ${user.id} - 
+            <strong>Nombre:</strong> ${user.nombre} - 
+            <strong>Usuario:</strong> ${user.usuario}
+            <button class="btn btn-warning btn-sm mx-2" onclick="editUser(${user.id})">Editar</button>
+            <button class="btn btn-danger btn-sm" onclick="deleteUser(${user.id})">Eliminar</button>
+          `;
+          userList.appendChild(li);
+        });
+      })
+      .catch(function (error) {
+        Swal.fire('Error', 'Error al cargar usuarios.', 'error');
+      });
+  }
+
+  document.getElementById('addUserForm').addEventListener('submit', function(event) {
+    event.preventDefault();
+    const formData = new FormData(this);
+    const userData = {};
+    formData.forEach(function(value, key) {
+      userData[key] = value;
+    });
+    axios.post('/users', userData)
+      .then(function (response) {
+        Swal.fire('Agregado', 'Usuario agregado con éxito.', 'success');
+        document.getElementById('addUserForm').reset();
+        fetchUsers();
+      })
+      .catch(function (error) {
+        Swal.fire('Error', 'Error al agregar usuario.', 'error');
+      });
+  });
+
+  function editUser(userId) {
+  axios.get(`/users/${userId}`)
+    .then(function(response) {
+      const user = response.data[0]; // Si la respuesta es un array y el usuario está en la primera posición
+      if (user) {
+        document.getElementById('editUserId').value = user.id;
+        document.getElementById('editUserName').value = user.nombre;
+        document.getElementById('editUserUsername').value = user.usuario;
+        document.getElementById('editUserPassword').value = user.contraseña;
+        Swal.fire({
+          title: 'Datos Cargados!',
+          text: 'Los datos del usuario se han cargado correctamente en el formulario.',
+          icon: 'success',
+          confirmButtonText: 'Ok'
+        });
+      } else {
+        console.error('No user data returned from the server.');
+        Swal.fire({
+          title: 'Sin Datos',
+          text: 'No se encontraron datos del usuario.',
+          icon: 'error',
+          confirmButtonText: 'Ok'
+        });
+      }
+    })
+    .catch(function(error) {
+      console.error('Error fetching user data:', error);
+      Swal.fire({
+        title: 'Error de Carga',
+        text: 'Hubo un error al cargar los datos del usuario.',
+        icon: 'error',
+        confirmButtonText: 'Ok'
+      });
+    });
+}
+
+
+
+  function deleteUser(userId) {
+    axios.delete(`/users/${userId}`)
+      .then(function (response) {
+        Swal.fire('Eliminado', 'Usuario eliminado con éxito.', 'success');
+        fetchUsers();
+      })
+      .catch(function (error) {
+        Swal.fire('Error', 'Error al eliminar usuario.', 'error');
+      });
+  }
+
+  function updateUser() {
+      const userId = document.getElementById('editUserId').value;
+      const userData = {
+        nombre: document.getElementById('editUserName').value,
+        usuario: document.getElementById('editUserUsername').value,
+        contraseña: document.getElementById('editUserPassword').value
+      };
+
+      axios.put(`/users/${userId}`, userData)
+        .then(function (response) {
+          Swal.fire('Actualizado', 'Usuario actualizado con éxito.', 'success');
+          fetchUsers(); // Refresh the user list after the update
+        })
+        .catch(function (error) {
+          console.error('Error updating user:', error);
+          Swal.fire('Error', 'Error al actualizar usuario.', 'error');
+        });
+      }
+
+      document.getElementById('findUserByIdForm').addEventListener('submit', function(event) {
+  event.preventDefault(); // Previene la recarga de la página
+  const userId = document.getElementById('userId').value;
+  axios.get(`/users/${userId}`)
+    .then(function(response) {
+      const users = response.data; // Suponiendo que la respuesta es un arreglo
+      const userDetails = document.getElementById('userDetails');
+      userDetails.innerHTML = ''; // Limpiar contenido anterior
+      if (users.length > 0) {
+        const user = users[0]; // Tomamos el primer usuario del arreglo
+        userDetails.innerHTML = `
+          <h2>Detalles del Usuario</h2>
+          <p><strong>Nombre:</strong> ${user.nombre}</p>
+          <p><strong>Usuario:</strong> ${user.usuario}</p>
+          <p><strong>Contraseña:</strong> ${user.contraseña}</p>
+        `;
+        Swal.fire({
+          title: 'Usuario Encontrado',
+          text: 'Los detalles del usuario se han cargado correctamente.',
+          icon: 'success',
+          confirmButtonText: 'Ok'
+        });
+      } else {
+        Swal.fire({
+          title: 'No Encontrado',
+          text: 'No se encontró ningún usuario con el ID proporcionado.',
+          icon: 'warning',
+          confirmButtonText: 'Ok'
+        });
+      }
+    })
+    .catch(function(error) {
+      console.error('Error al buscar usuario:', error);
+      Swal.fire({
+        title: 'Error de Búsqueda',
+        text: 'Hubo un error al buscar los datos del usuario.',
+        icon: 'error',
+        confirmButtonText: 'Ok'
+      });
+    });
+});
+
+
+  function deleteUserById() {
+    const userId = document.getElementById('deleteUserId').value;
+    if (userId) { // Asegúrate de que el ID no esté vacío
+      axios.delete(`/users/${userId}`)
+        .then(function (response) {
+          Swal.fire('Eliminado', 'Usuario eliminado con éxito.', 'success');
+          document.getElementById('deleteUserId').value = ''; // Limpiar el campo después de eliminar
+          fetchUsers(); // Actualiza la lista de usuarios
+        })
+        .catch(function (error) {
+          console.error('Error deleting user:', error);
+          Swal.fire('Error', 'Error al eliminar usuario.', 'error');
+        });
+    } else {
+      Swal.fire('Advertencia', 'Por favor, introduce un ID válido.', 'warning');
+    }
+  }
+</script>
+</body>
+</html>
